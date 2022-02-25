@@ -10,7 +10,7 @@ import io.ktor.server.cio.*
 
 @OptIn(KtorExperimentalLocationsAPI::class)
 fun main() {
-    embeddedServer(CIO, port = System.getProperty("PORT")?.toInt() ?: 9090, host = "127.0.0.1") {
+    embeddedServer(CIO, port = System.getenv("PORT")?.toInt() ?: 9090, host = "127.0.0.1") {
         configureRouting()
         configureHTTP()
         configureSerialization()
