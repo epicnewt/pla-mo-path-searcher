@@ -53,7 +53,7 @@ fun holisticSearch(
 
 private fun List<SearchResult>.toHTML() {
     this.forEach { (path, outbreakChain) ->
-        println("Path: ${path.formatAsPath()}")
+        println("Path: $path")
         outbreakChain.forEachIndexed { i, (actions, reseeds) ->
             actions.map {
                 when (it) {
@@ -76,13 +76,12 @@ private fun List<SearchResult>.toHTML() {
     }
 }
 
-private fun IntArray.formatAsPath(): String = this.joinToString("§")
-    .replace(Regex("-(\\d)§?"), "-$1,")
-    .replace(Regex("(-\\d(,-\\d)*),?"), "[$1]")
-    .replace("-", "")
-    .replace("§", "|")
-
-
+private fun IntArray.formatAsPath(): String {
+    return this.joinToString("§")
+        .replace(Regex("-(\\d)§?"), "-$1,")
+        .replace(Regex("(-\\d(,-\\d)*),?"), "[$1]")
+        .replace("-", "")
+        .replace("§", "|")
 }
 
 private fun followHolisticAggressivePath(seed: ULong, rolls: Int, path: IntArray, isGenderless: Boolean): List<Advance> {
