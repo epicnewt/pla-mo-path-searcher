@@ -8,10 +8,10 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization") version "1.6.10"
 }
 
-group = "rng.pla.epicnewt.com"
+group = "com.epicnewt.pla.rng"
 version = "0.0.1"
 application {
-    mainClass.set("rng.pla.epicnewt.com.ApplicationKt")
+    mainClass.set("com.epicnewt.pla.rng.ApplicationKt")
 }
 
 repositories {
