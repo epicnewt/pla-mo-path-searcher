@@ -50,14 +50,14 @@ const Footer = () => (
     </section>
 )
 
-function toActionDescription(advance) {
-    return advance.actions.map(i => {
+function toActionDescription(actions) {
+    return actions.map(i => {
         if (i <= -1) {
             return `Battle ${i * -1}`
         } else if (i >= -1) {
             return `Catch ${Math.abs(i)}`
         }
-    }).join(", ");
+    });
 }
 
 const SearchResult = ({result}) => (
@@ -72,7 +72,7 @@ const SearchResult = ({result}) => (
                     aria-controls="panel1a-content"
                     id="panel1a-header"
                 >
-                    <Typography>Advance {i}: {toActionDescription(advance)}{result.advances.length - 1 !== i ? '' : ', then return to town'}</Typography>
+                    <Typography>Advance {i}: {[...toActionDescription(advance.actions), ...((result.advances.length - 1 === i) ? [] : ['Return to town'])].join(", ")}</Typography>
                 </AccordionSummary>
                 <AccordionDetails>
                     <List>
