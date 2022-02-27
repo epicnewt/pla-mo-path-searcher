@@ -26,6 +26,13 @@ const {
     useCallback
 } = React
 
+const queryParams = {};
+location.search.substr(1)
+    .split("&")
+    .forEach((item) => {
+        queryParams[item.split("=")[0]] = item.split("=")[1]
+    })
+
 const Header = () => (
     <AppBar position="static">
         <Toolbar>
@@ -126,12 +133,28 @@ const SearchResults = ({data}) => {
         )
     )
 }
+
+const useLocalStorage = (key, defaultValue) => {
+    const isBool = defaultValue === true || defaultValue === false;
+    const restoredDefault = isBool
+        ? (queryParams[key] || localStorage.getItem(key)) === 'true'
+        : queryParams[key] || localStorage.getItem(key)
+    const useStateArr = useState(restoredDefault || defaultValue);
+    const [state, setState] = useStateArr
+
+    const advancedSetter = useCallback((newValue) => {
+        localStorage.setItem(key, newValue);
+        setState(newValue)
+    })
+    return [state, advancedSetter]
+}
+
 const App = () => {
-    const [seed, setSeed] = useState('')
-    const [spawns, setSpawns] = useState('10')
-    const [dexComplete, setDexComplete] = useState(false)
-    const [dexPerfect, setDexPerfect] = useState(false)
-    const [shinyCharm, setShinyCharm] = useState(false)
+    const [seed, setSeed] = useLocalStorage('seed', '')
+    const [spawns, setSpawns] = useLocalStorage('spawns', '10')
+    const [dexComplete, setDexComplete] = useLocalStorage('complete', false)
+    const [dexPerfect, setDexPerfect] = useLocalStorage('perfect', false)
+    const [shinyCharm, setShinyCharm] = useLocalStorage('shinyCharm', false)
     const previous = useRef([dexComplete, dexPerfect, shinyCharm])
     const rolls = useRef()
     const lockAvailable = useRef(true)
