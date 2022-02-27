@@ -5,12 +5,12 @@ import com.epicnewt.pla.rng.plugins.configureRouting
 import com.epicnewt.pla.rng.plugins.configureSerialization
 import com.epicnewt.pla.rng.plugins.configureTemplating
 import io.ktor.locations.*
-import io.ktor.server.engine.*
 import io.ktor.server.cio.*
+import io.ktor.server.engine.*
 
 @OptIn(KtorExperimentalLocationsAPI::class)
 fun main() {
-    embeddedServer(CIO, port = System.getenv("PORT")?.toInt() ?: 9090) {
+    embeddedServer(CIO, watchPaths = listOf("classes", "resources")) {
         configureRouting()
         configureHTTP()
         configureSerialization()

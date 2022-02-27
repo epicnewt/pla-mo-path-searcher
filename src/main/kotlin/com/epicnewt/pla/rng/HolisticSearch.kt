@@ -45,7 +45,7 @@ fun holisticSearch(
         return matches
     }
 
-    if (depth == 15)
+    if (depth == 12)
         return emptyList()
 
     return holisticSearch(seed, totalSpawns, rolls, depth + 1, multiBattleMax, isGenderless, isAggressive, matcher)
@@ -64,7 +64,7 @@ private fun List<SearchResult>.toHTML() {
             println("Advance: ${i + 1} (${actions.joinToString("|")})")
             var position = 1
             reseeds.forEachIndexed { o, (groupSeed, pokemon) ->
-                println("  Group Seed: ${groupSeed.toHex()}")
+                println("  Group Seed: ${groupSeed}")
                 pokemon.forEach {
                     when (o) {
                         0 -> println("    Initial  #${position++}: $it")
@@ -102,7 +102,7 @@ private fun followHolisticAggressivePath(seed: ULong, rolls: Int, path: IntArray
     }
 
     fun reseed() {
-        spawnGroups.add(ReseedSet(currentGroupSeed, ArrayList(spawnedPokemon)))
+        spawnGroups.add(ReseedSet(currentGroupSeed.toHex(), ArrayList(spawnedPokemon)))
         spawnedPokemon.clear()
         currentGroupSeed = mainRng.next()
         mainRng.reseed(currentGroupSeed)

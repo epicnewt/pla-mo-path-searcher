@@ -1,0 +1,38 @@
+body {
+    margin: 0;
+}
+
+section.body {
+    padding: 1em
+}
+
+div.pla-text-input {
+    margin-right: 9px;
+}
+
+div.pla-text-input #seed {
+    width: 205px ;
+}
+
+div.pla-text-input #spawns {
+    width: 75px ;
+}
+
+button .MuiCircularProgress-root {
+    margin-left: 10px;
+}
+
+button.MuiButtonBase-root {
+    height: 56px;
+}
+
+div.MuiAccordionDetails-root, ul.MuiList-root {
+    margin-top: -8px;
+}
+
+section.footer {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    font-family: Roboto;
+}

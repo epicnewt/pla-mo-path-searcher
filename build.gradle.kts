@@ -12,6 +12,7 @@ group = "com.epicnewt.pla.rng"
 version = "0.0.1"
 application {
     mainClass.set("com.epicnewt.pla.rng.ApplicationKt")
+    applicationDefaultJvmArgs = listOf("-Dio.ktor.development=true")
 }
 
 repositories {
