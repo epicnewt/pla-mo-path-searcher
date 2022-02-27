@@ -10,7 +10,7 @@ import io.ktor.server.engine.*
 
 @OptIn(KtorExperimentalLocationsAPI::class)
 fun main() {
-    embeddedServer(CIO, watchPaths = listOf("classes", "resources")) {
+    embeddedServer(CIO, watchPaths = listOf("classes", "resources"), port = System.getenv("PORT")?.toInt() ?: 9090) {
         configureRouting()
         configureHTTP()
         configureSerialization()
