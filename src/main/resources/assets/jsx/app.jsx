@@ -197,7 +197,6 @@ const App = () => {
         const [pComplete, pPerfect, pShinyCharm] = previous.current
 
         if (!pShinyCharm && shinyCharm) {
-            console.log('setDexComplete(' + true + ')', setDexComplete)
             setDexComplete(true)
         }
 
