@@ -92,7 +92,7 @@ private fun followHolisticAggressivePath(seed: ULong, rolls: Int, path: IntArray
     fun generatePokemon() {
         spawnerRng.reseed(mainRng.next())
         mainRng.next() // spawner 1 seed, unused
-        val alpha = spawnedPokemon.none { it.alpha } && spawnerRng.next() > 0xFD7720F353A4BBFFu
+        val alpha = spawnerRng.next() > 0xFD7720F353A4BBFFu && spawnedPokemon.none { it.alpha }
         spawnedPokemon.add(Pokemon.fromSeed(spawnerRng.next(), rolls, alpha, isGenderless))
     }
 
