@@ -22,9 +22,9 @@ fun holisticSearch(
     matcher: (Pokemon) -> Boolean = { it.alpha && it.shiny },
     avoidTown: Boolean
 ): List<SearchResult> {
-    val multiBattleShift = if (isAggressive) multiBattleMax else 0
-    val base = totalSpawns + multiBattleShift - SPAWN_OFFSET
-    val townChar = multiBattleShift.digitToChar(base)
+    val multiBattleShift = if (isAggressive) multiBattleMax + (if (avoidTown) 1 else 0) else 0
+    val base = if (avoidTown) multiBattleShift else totalSpawns + multiBattleShift - SPAWN_OFFSET
+    val townChar = multiBattleShift.digitToChar(base + (if (avoidTown) 1 else 0))
     val despawns = totalSpawns - SPAWN_OFFSET
     val matches = (0.toULong() until base.pow(depth + 1))
         .asSequence()
@@ -48,35 +48,13 @@ fun holisticSearch(
         return matches
     }
 
-    if (depth == 12)
+    if (depth == 10 && !avoidTown)
         return emptyList()
 
-    return holisticSearch(seed, totalSpawns, rolls, depth + 1, multiBattleMax, isGenderless, isAggressive, matcher, (gameVersion != "1.0.2"))
-}
+    if (depth == (totalSpawns - 5) && avoidTown)
+        return emptyList()
 
-private fun List<SearchResult>.toHTML() {
-    this.forEach { (path, outbreakChain) ->
-        println("Path: $path")
-        outbreakChain.forEachIndexed { i, (actions, reseeds) ->
-            actions.map {
-                when (it) {
-                    in -4 until 0 -> ""
-                    else -> ""
-                }
-            }
-            println("Advance: ${i + 1} (${actions.joinToString("|")})")
-            var position = 1
-            reseeds.forEachIndexed { o, (groupSeed, pokemon) ->
-                println("  Group Seed: ${groupSeed}")
-                pokemon.forEach {
-                    when (o) {
-                        0 -> println("    Initial  #${position++}: $it")
-                        else -> println("    Respawn  #${position++ - 4}: $it")
-                    }
-                }
-            }
-        }
-    }
+    return holisticSearch(seed, totalSpawns, rolls, depth + 1, multiBattleMax, isGenderless, isAggressive, matcher, avoidTown)
 }
 
 private fun IntArray.formatAsPath(): String {
@@ -111,15 +89,15 @@ private fun followHolisticAggressivePath(seed: ULong, rolls: Int, path: IntArray
         mainRng.reseed(currentGroupSeed)
     }
 
-    fun generatePokemon(): Pokemon = run {
+    fun generatePokemon() {
         spawnerRng.reseed(mainRng.next())
         mainRng.next() // spawner 1 seed, unused
-        val alpha = spawnerRng.next() > 0xFD7720F353A4BBFFu
-        Pokemon.fromSeed(spawnerRng.next(), rolls, alpha, isGenderless)
+        val alpha = spawnedPokemon.none { it.alpha } && spawnerRng.next() > 0xFD7720F353A4BBFFu
+        spawnedPokemon.add(Pokemon.fromSeed(spawnerRng.next(), rolls, alpha, isGenderless))
     }
 
     for (initSpawn in 1..4) {
-        spawnedPokemon.add(generatePokemon())
+        generatePokemon()
     }
 
     reseed()
@@ -128,25 +106,25 @@ private fun followHolisticAggressivePath(seed: ULong, rolls: Int, path: IntArray
         if (step == 0) {
             goToTown()
             for (i in 1..4) { //advance to town
-                spawnedPokemon.add(generatePokemon())
+                generatePokemon()
             }
             reseed()
         } else if (step < 0) { //aggro multi battle
             actions.add(step)
             for (i in 1..step.absoluteValue) {
-                spawnedPokemon.add(generatePokemon())
+                generatePokemon()
             }
             reseed()
             isDirty = true
         } else if (step > 0) { // passive
             actions.add(step)
             for (i in 1..step) {
-                spawnedPokemon.add(generatePokemon())
+                generatePokemon()
                 reseed()
             }
             goToTown()
             for (i in 1..4) { //advance to town
-                spawnedPokemon.add(generatePokemon())
+                generatePokemon()
             }
             reseed()
         }

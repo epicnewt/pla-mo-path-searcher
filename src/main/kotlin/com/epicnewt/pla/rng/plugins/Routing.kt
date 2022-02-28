@@ -22,46 +22,11 @@ fun Application.configureRouting() {
         static("assets") {
             resources("assets")
         }
-        get<AggressiveSearch> { params ->
-            val (seed, spawns, rolls, shiny, alpha) = params;
-            call.respond(
-                holisticSearch(seed.toULong(16), spawns, rolls, matcher = { p ->
-                    p.shiny == shiny && p.alpha == alpha
-                }, avoidTown = (gameVersion != "1.0.2"))
-            )
-        }
 
-        get<AggressiveSearch.Genderless> { params ->
-            val (seed, spawns, rolls, shiny, alpha) = params.search;
-            call.respond(
-                holisticSearch(seed.toULong(16), spawns, rolls, isGenderless = true, matcher = { p ->
-                    p.shiny == shiny && p.alpha == alpha
-                }, avoidTown = (gameVersion != "1.0.2"))
-            )
-        }
-
-        get<PassiveSearch> { params ->
-            val (seed, spawns, rolls, shiny, alpha) = params;
-            call.respond(
-                holisticSearch(seed.toULong(16), spawns, rolls, isAggressive = false, matcher = { p ->
-                    p.shiny == shiny && p.alpha == alpha
-                }, avoidTown = (gameVersion != "1.0.2"))
-            )
-        }
-
-        get<PassiveSearch.Genderless> { params ->
-            val (seed, spawns, rolls, shiny, alpha) = params.search;
-            call.respond(
-                holisticSearch(seed.toULong(16), spawns, rolls, isGenderless = true, isAggressive = false, matcher = { p ->
-                    p.shiny == shiny && p.alpha == alpha
-                }, avoidTown = (gameVersion != "1.0.2"))
-            )
-        }
         post("/holistic-search") {
             val (seed, spawns, rolls, genderRatio, gameVersion) = call.receive<HolisticSearch>()
             val holisticSearch = holisticSearch(seed.toULong(16), spawns, rolls, avoidTown = (gameVersion != "1.0.2"))
             val response = mapOf("results" to holisticSearch)
-            println(response)
             call.respond(response)
         }
 
@@ -107,17 +72,3 @@ fun Application.configureRouting() {
 
 @Serializable
 data class HolisticSearch(val seed: String, val spawns: Int, val rolls: Int, val genderRatio: List<Int>, val gameVersion: String)
-
-@OptIn(KtorExperimentalLocationsAPI::class)
-@Location("/v1/aggressive/{seed}/{spawns}")
-data class AggressiveSearch(val seed: String, val spawns: Int = 10, val rolls: Int = 26, val shiny: Boolean = true, val alpha: Boolean = true) {
-    @Location("/genderless")
-    data class Genderless(val search: AggressiveSearch)
-}
-
-@OptIn(KtorExperimentalLocationsAPI::class)
-@Location("/v1/passive/{seed}/{spawns}")
-data class PassiveSearch(val seed: String, val spawns: Int = 10, val rolls: Int = 26, val shiny: Boolean = true, val alpha: Boolean = true, val gender: IntRange = 0..252) {
-    @Location("/genderless")
-    data class Genderless(val search: PassiveSearch)
-}
