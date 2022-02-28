@@ -10,9 +10,13 @@ const {
     Checkbox,
     CircularProgress,
     FormControlLabel,
+    FormControl,
+    InputLabel,
     List,
     ListItem,
     ListItemText,
+    MenuItem,
+    Select,
     SvgIcon,
     TextField,
     Toolbar,
@@ -155,6 +159,7 @@ const App = () => {
     const [dexComplete, setDexComplete] = useLocalStorage('complete', false)
     const [dexPerfect, setDexPerfect] = useLocalStorage('perfect', false)
     const [shinyCharm, setShinyCharm] = useLocalStorage('shinyCharm', false)
+    const [gameVersion, setGameVersion] = useLocalStorage('gameVersion', "1.0.2")
     const previous = useRef([dexComplete, dexPerfect, shinyCharm])
     const rolls = useRef()
     const lockAvailable = useRef(true)
@@ -168,10 +173,11 @@ const App = () => {
         lockAvailable.current = false
         try {
             const data = {
-                seed: seed,
+                seed,
                 spawns: Number.parseInt(spawns),
                 rolls: rolls.current,
-                genderRatio: [50, 50]
+                genderRatio: [50, 50],
+                gameVersion
             }
 
             setShowSpinner(true)
@@ -224,6 +230,22 @@ const App = () => {
                 <TextField className="pla-text-input" value={seed} onChange={(e) => setSeed(e.target.value)} name="seed" id="seed" label="Seed" variant="outlined"/>
                 <TextField className="pla-text-input" value={spawns} onChange={(e) => setSpawns(e.target.value)} name="spawns" id="spawns" label="Spawns" variant="outlined"
                            type="number"/>
+               <FormControl variant="outlined">
+                <InputLabel id="game-version-label">Version</InputLabel>
+                <Select
+                    labelId="game-version-label"
+                    id="game-version-select"
+                    value={gameVersion}
+                    onChange={(e) => setGameVersion(e.target.value)}
+                    label="Version"
+                >
+                    <MenuItem value="">
+                        <em>None</em>
+                    </MenuItem>
+                    <MenuItem value={"1.0.2"}>v1.0.2</MenuItem>
+                    <MenuItem value={"1.1.0"}>v1.1.0</MenuItem>
+                </Select>
+               </FormControl>
                 <Button variant="contained" size="large" type="submit">
                     Search
                     {showSpinner && <CircularProgress hidden={true} size={20} color="inherit"/>}

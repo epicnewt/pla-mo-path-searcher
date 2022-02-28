@@ -19,14 +19,17 @@ fun holisticSearch(
     multiBattleMax: Int = MULTI_BATTLE_MAX,
     isGenderless: Boolean = false,
     isAggressive: Boolean = true,
-    matcher: (Pokemon) -> Boolean = { it.alpha && it.shiny }
+    matcher: (Pokemon) -> Boolean = { it.alpha && it.shiny },
+    avoidTown: Boolean
 ): List<SearchResult> {
     val multiBattleShift = if (isAggressive) multiBattleMax else 0
     val base = totalSpawns + multiBattleShift - SPAWN_OFFSET
+    val townChar = multiBattleShift.digitToChar(base)
     val despawns = totalSpawns - SPAWN_OFFSET
     val matches = (0.toULong() until base.pow(depth + 1))
         .asSequence()
-        .map { it.toString(base).padStart(depth, '0') }
+        .map { if (avoidTown) it.toString(base) else it.toString(base).padStart(depth, '0') }
+        .filter { !avoidTown || !it.contains(townChar) }
         .map { it.toCharArray() }
         .map { it.map { c -> c.digitToInt(totalSpawns) - multiBattleShift } }
         .map { it.toIntArray() }
@@ -48,7 +51,7 @@ fun holisticSearch(
     if (depth == 12)
         return emptyList()
 
-    return holisticSearch(seed, totalSpawns, rolls, depth + 1, multiBattleMax, isGenderless, isAggressive, matcher)
+    return holisticSearch(seed, totalSpawns, rolls, depth + 1, multiBattleMax, isGenderless, isAggressive, matcher, (gameVersion != "1.0.2"))
 }
 
 private fun List<SearchResult>.toHTML() {

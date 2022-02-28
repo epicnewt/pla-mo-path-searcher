@@ -6,8 +6,9 @@ section.body {
     padding: 1em
 }
 
-div.pla-text-input {
+div.MuiFormControl-root {
     margin-right: 9px;
+    min-width: 100px;
 }
 
 div.pla-text-input #seed {
