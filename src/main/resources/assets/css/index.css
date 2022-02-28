@@ -23,8 +23,14 @@ button .MuiCircularProgress-root {
     margin-left: 10px;
 }
 
-button.MuiButtonBase-root {
+button.MuiButtonBase-root.search {
     height: 56px;
+}
+
+button.MuiButtonBase-root.continue {
+    position: absolute;
+    right: 59px;
+    top: 8px;
 }
 
 div.MuiAccordionDetails-root, ul.MuiList-root {

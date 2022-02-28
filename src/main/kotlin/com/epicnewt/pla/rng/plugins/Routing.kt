@@ -3,7 +3,6 @@ package com.epicnewt.pla.rng.plugins
 import com.epicnewt.pla.rng.holisticSearch
 import io.ktor.application.*
 import io.ktor.html.*
-import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.locations.*
 import io.ktor.request.*
@@ -26,6 +25,13 @@ fun Application.configureRouting() {
         post("/holistic-search") {
             val (seed, spawns, rolls, genderRatio, gameVersion) = call.receive<HolisticSearch>()
             val holisticSearch = holisticSearch(seed.toULong(16), spawns, rolls, avoidTown = (gameVersion != "1.0.2"))
+            val response = mapOf("results" to holisticSearch)
+            call.respond(response)
+        }
+
+        post("/continue") {
+            val (seed, spawns, rolls, genderRatio) = call.receive<HolisticSearch>()
+            val holisticSearch = holisticSearch(seed.toULong(16), spawns, rolls, avoidTown = false, matchCount = 2)
             val response = mapOf("results" to holisticSearch)
             call.respond(response)
         }

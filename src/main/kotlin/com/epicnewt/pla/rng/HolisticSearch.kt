@@ -19,30 +19,48 @@ fun holisticSearch(
     multiBattleMax: Int = MULTI_BATTLE_MAX,
     isGenderless: Boolean = false,
     isAggressive: Boolean = true,
+    avoidTown: Boolean = false,
+    matchCount: Int = 1,
     matcher: (Pokemon) -> Boolean = { it.alpha && it.shiny },
-    avoidTown: Boolean
 ): List<SearchResult> {
     val multiBattleShift = if (isAggressive) multiBattleMax + (if (avoidTown) 1 else 0) else 0
     val base = if (avoidTown) multiBattleShift else totalSpawns + multiBattleShift - SPAWN_OFFSET
     val townChar = multiBattleShift.digitToChar(base + (if (avoidTown) 1 else 0))
     val despawns = totalSpawns - SPAWN_OFFSET
-    val matches = (0.toULong() until base.pow(depth + 1))
-        .asSequence()
-        .map { if (avoidTown) it.toString(base) else it.toString(base).padStart(depth, '0') }
-        .filter { !avoidTown || !it.contains(townChar) }
-        .map { it.toCharArray() }
-        .map { it.map { c -> c.digitToInt(totalSpawns) - multiBattleShift } }
-        .map { it.toIntArray() }
-        .filter { it.sumOf { i -> i.absoluteValue } <= despawns }
-        .map { path -> SearchResult(path.formatAsPath(), followHolisticAggressivePath(seed, rolls, path, isGenderless)) }
-        .filter { (_, advances) ->
-            val reseeds = advances.last().reseeds
-            when (reseeds.size) {
-                1 -> reseeds.first().pokemon.any(matcher) // is always an advance of 4
-                else -> reseeds.last().pokemon.last().let(matcher)
-            }
+
+    val matches = ArrayList<SearchResult>()
+
+    val start: ULong = if (matchCount == 1) 0u else 10u
+    for (i in (start until base.pow(depth + 1))) {
+        val pathStr = if (avoidTown) i.toString(base) else i.toString(base).padStart(depth, '0')
+        if (avoidTown && pathStr.contains(townChar))
+            continue
+        val path = pathStr.toCharArray().map { c -> c.digitToInt(totalSpawns) - multiBattleShift }
+        if (isAggressive && path.isRedundant())
+            continue
+        if (path.sumOf { it.absoluteValue } > despawns)
+            continue
+        val (advances, nextSeed) = followHolisticAggressivePath(seed, rolls, path, isGenderless)
+        val reseeds = advances.last().reseeds
+        var isMatch = when (reseeds.size) {
+            1 -> reseeds.first().pokemon.any(matcher) // is always an advance of 4
+            else -> reseeds.last().pokemon.last().let(matcher)
         }
-        .toList()
+
+        if (isMatch && matchCount > 1) {
+            val additionalMatches = advances.sumOf { advance ->
+                advance.reseeds.dropLast(1).sumOf {
+                    it.pokemon.count(matcher)
+                }
+            } + 1
+
+            isMatch = additionalMatches >= matchCount
+        }
+
+        if (isMatch) {
+            matches.add(SearchResult(path, advances, nextSeed, (totalSpawns - 1) - path.sumOf { it.absoluteValue }))
+        }
+    }
 
     if (matches.isNotEmpty()) {
         return matches
@@ -54,18 +72,14 @@ fun holisticSearch(
     if (depth == (totalSpawns - 5) && avoidTown)
         return emptyList()
 
-    return holisticSearch(seed, totalSpawns, rolls, depth + 1, multiBattleMax, isGenderless, isAggressive, matcher, avoidTown)
+    return holisticSearch(seed, totalSpawns, rolls, depth + 1, multiBattleMax, isGenderless, isAggressive, avoidTown, matchCount, matcher)
 }
 
-private fun IntArray.formatAsPath(): String {
-    return this.joinToString("§")
-        .replace(Regex("-(\\d)§?"), "-$1,")
-        .replace(Regex("(-\\d(,-\\d)*),?"), "[$1]")
-        .replace("-", "")
-        .replace("§", "|")
+private fun <T> Iterable<T>.isRedundant(): Boolean {
+    return last() == -1
 }
 
-private fun followHolisticAggressivePath(seed: ULong, rolls: Int, path: IntArray, isGenderless: Boolean): List<Advance> {
+private fun followHolisticAggressivePath(seed: ULong, rolls: Int, path: List<Int>, isGenderless: Boolean): Pair<List<Advance>, String> {
     val advances = ArrayList<Advance>()
     val spawnGroups = ArrayList<ReseedSet>()
     val actions = ArrayList<Int>()
@@ -134,5 +148,19 @@ private fun followHolisticAggressivePath(seed: ULong, rolls: Int, path: IntArray
         goToTown()
     }
 
-    return advances;
+    return advances to nextSeed(advances).toHex();
+}
+
+private fun nextSeed(advances: ArrayList<Advance>): ULong {
+    val (groupSeed, pokemon) = advances.last().reseeds.last()
+
+    val nextSeed = XOROSHIRO(groupSeed.toULong(16))
+
+    for (p in pokemon) {
+        nextSeed.next()
+        nextSeed.next()
+    }
+
+    val next = nextSeed.next()
+    return next
 }

@@ -34,8 +34,10 @@ const queryParams = {};
 location.search.substr(1)
     .split("&")
     .forEach((item) => {
-        queryParams[item.split("=")[0]] = item.split("=")[1]
+        queryParams[item.split("=")[0]] = decodeURIComponent(item.split("=")[1])
     })
+
+console.log(queryParams)
 
 const Header = () => (
     <AppBar position="static">
@@ -64,61 +66,74 @@ function toActionDescription(actions) {
     });
 }
 
-const SearchResult = ({result}) => (
-    // null
-    <div>{
-        result.advances.map((advance, i) => (
-            <Accordion key={i}>
-                <AccordionSummary
-                    expandIcon={<SvgIcon>
-                        <path d="m12 8-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/>
-                    </SvgIcon>}
-                    aria-controls="panel1a-content"
-                    id="panel1a-header"
-                >
-                    <Typography>Advance {i}: {[...toActionDescription(advance.actions), ...((result.advances.length - 1 === i) ? [] : ['Return to town'])].join(", ")}</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                    <List>
-                        {advance.reseeds.map((reseed, i) => [
-                            <ListItem key={reseed.groupSeed}>
-                                <ListItemText
-                                    primary={`Group seed: ${reseed.groupSeed}`}
-                                />
-                            </ListItem>,
-                            reseed.pokemon.map(p => (
-                                <ListItem key={reseed.groupSeed}>
-                                    {/*{`"seed": "C990BE9317900E1F","sidtid": 3032674752,"pid": 3554362865,"ivs": {"hp": 24,  "att": 20,  "def": 19,  "spAtt": 1,  "spDef": 12,  "speed": 15,  "evs": "110000"},"nature": "Brave","gender": 43,"shiny": false,"alpha": false}`}*/}
-                                    <ListItemText key={p.sidtid}
-                                                  secondary={
-                                                      <div>
-                                                          {`Seed: ${p.seed} EVs: ${p.ivs.evs} Nature: ${p.nature} Gender: ${p.gender}`}
-                                                          {' Shiny: '}
-                                                          <span style={{color: p.shiny ? 'green' : undefined}}>{`${p.shiny}`}</span>
-                                                          {' Alpha: '}
-                                                          <span style={{color: p.alpha ? 'green' : undefined}}>{`${p.alpha}`}</span>
-                                                      </div>
-                                                  }
-                                    />
-                                </ListItem>
-                            ))
-                        ])}
-                    </List>
-                </AccordionDetails>
-            </Accordion>
-        ))
-    }</div>
-)
+const SearchResult = ({result, spawns}) => {
+    const remainingSpawns = spawns - (result.path.reduce((acc, n) => acc + Math.abs(n), 0) + 1);
 
-const SearchResults = ({data}) => {
+    const onContinue = useCallback(() => {
+        window.open(`/?seed=${result.nextSeed}&spawns=${remainingSpawns}&continue=${encodeURIComponent(result.pathDescription)}`, '_blank')
+    })
+
+    const lastIndex = result.advances.length - 1;
+    return (
+        <div>{
+            result.advances.map((advance, i) => (
+                <Accordion key={i}>
+                    <AccordionSummary
+                        expandIcon={<SvgIcon>
+                            <path d="m12 8-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/>
+                        </SvgIcon>}
+                        aria-controls="panel1a-content"
+                        id="panel1a-header"
+                    >
+                        <Typography>Advance {i}: {[...toActionDescription(advance.actions), ...((result.advances.length - 1 === i) ? [] : ['Return to town'])].join(", ")}</Typography>
+                        {(i === lastIndex && remainingSpawns > 6) && (
+                            <Button variant="contained" size="small" type="submit" className="continue" onClick={onContinue}>
+                                Continue
+                            </Button>
+                        )}
+                    </AccordionSummary>
+                    <AccordionDetails>
+                        <List>
+                            {advance.reseeds.map((reseed, i) => [
+                                <ListItem key={reseed.groupSeed}>
+                                    <ListItemText
+                                        primary={`Group seed: ${reseed.groupSeed}`}
+                                    />
+                                </ListItem>,
+                                reseed.pokemon.map(p => (
+                                    <ListItem key={reseed.groupSeed}>
+                                        {/*{`"seed": "C990BE9317900E1F","sidtid": 3032674752,"pid": 3554362865,"ivs": {"hp": 24,  "att": 20,  "def": 19,  "spAtt": 1,  "spDef": 12,  "speed": 15,  "evs": "110000"},"nature": "Brave","gender": 43,"shiny": false,"alpha": false}`}*/}
+                                        <ListItemText key={p.sidtid}
+                                                      secondary={
+                                                          <div>
+                                                              {`Seed: ${p.seed} EVs: ${p.ivs.evs} Nature: ${p.nature} Gender: ${p.gender}`}
+                                                              {' Shiny: '}
+                                                              <span style={{color: p.shiny ? 'green' : undefined}}>{`${p.shiny}`}</span>
+                                                              {' Alpha: '}
+                                                              <span style={{color: p.alpha ? 'green' : undefined}}>{`${p.alpha}`}</span>
+                                                          </div>
+                                                      }
+                                        />
+                                    </ListItem>
+                                ))
+                            ])}
+                        </List>
+                    </AccordionDetails>
+                </Accordion>
+            ))
+        }</div>
+    )
+}
+const SearchResults = ({data, spawns}) => {
     console.log(`<SearchResults data="${data}"/>`)
     if (!data || data.length === 0) {
         return <span>No results found with 10 actions or less. Search stopped.</span>
     }
 
-    if (data.length === 1)
-        return <SearchResult result={data[0]}/>
+    if (data.length === 1 && !queryParams['continue'])
+        return <SearchResult result={data[0]} spawns={spawns} />
 
+    const pathPrefix = queryParams['continue'] ? queryParams['continue'] + " -> " : ""
     return data.map((result, i) => (
             <Accordion key={i}>
                 <AccordionSummary
@@ -128,10 +143,10 @@ const SearchResults = ({data}) => {
                     aria-controls="panel1a-content"
                     id="panel1a-header"
                 >
-                    <Typography>{result.path}</Typography>
+                    <Typography>{pathPrefix + result.pathDescription}</Typography>
                 </AccordionSummary>
                 <AccordionDetails>
-                    <SearchResult result={result}/>
+                    <SearchResult result={result} spawns={spawns} />
                 </AccordionDetails>
             </Accordion>
         )
@@ -230,23 +245,23 @@ const App = () => {
                 <TextField className="pla-text-input" value={seed} onChange={(e) => setSeed(e.target.value)} name="seed" id="seed" label="Seed" variant="outlined"/>
                 <TextField className="pla-text-input" value={spawns} onChange={(e) => setSpawns(e.target.value)} name="spawns" id="spawns" label="Spawns" variant="outlined"
                            type="number"/>
-               <FormControl variant="outlined">
-                <InputLabel id="game-version-label">Version</InputLabel>
-                <Select
-                    labelId="game-version-label"
-                    id="game-version-select"
-                    value={gameVersion}
-                    onChange={(e) => setGameVersion(e.target.value)}
-                    label="Version"
-                >
-                    <MenuItem value="">
-                        <em>None</em>
-                    </MenuItem>
-                    <MenuItem value={"1.0.2"}>v1.0.2</MenuItem>
-                    <MenuItem value={"1.1.0"}>v1.1.0</MenuItem>
-                </Select>
-               </FormControl>
-                <Button variant="contained" size="large" type="submit">
+                <FormControl variant="outlined">
+                    <InputLabel id="game-version-label">Version</InputLabel>
+                    <Select
+                        labelId="game-version-label"
+                        id="game-version-select"
+                        value={gameVersion}
+                        onChange={(e) => setGameVersion(e.target.value)}
+                        label="Version"
+                    >
+                        <MenuItem value="">
+                            <em>None</em>
+                        </MenuItem>
+                        <MenuItem value={"1.0.2"}>v1.0.2</MenuItem>
+                        <MenuItem value={"1.1.0"}>v1.1.0</MenuItem>
+                    </Select>
+                </FormControl>
+                <Button variant="contained" size="large" type="submit" className="search">
                     Search
                     {showSpinner && <CircularProgress hidden={true} size={20} color="inherit"/>}
                 </Button>
@@ -264,7 +279,7 @@ const App = () => {
                     label="Shiny Charm"
                 />
             </form>
-            {!!searchResults.results && <SearchResults data={searchResults.results}/>}
+            {!!searchResults.results && <SearchResults data={searchResults.results} spawns={spawns}/>}
         </section>,
         <Footer/>
     ]
