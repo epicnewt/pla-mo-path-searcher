@@ -1,6 +1,7 @@
 package com.epicnewt.pla.rng.plugins
 
 import com.epicnewt.pla.rng.holisticSearch
+import com.epicnewt.pla.rng.model.pokemon.Pokemon
 import io.ktor.application.*
 import io.ktor.html.*
 import io.ktor.http.content.*
@@ -8,7 +9,6 @@ import io.ktor.locations.*
 import io.ktor.request.*
 import io.ktor.response.*
 import io.ktor.routing.*
-import io.ktor.routing.post
 import kotlinx.html.*
 import kotlinx.serialization.Serializable
 
@@ -23,15 +23,40 @@ fun Application.configureRouting() {
         }
 
         post("/holistic-search") {
-            val (seed, spawns, rolls, genderRatio, gameVersion) = call.receive<HolisticSearch>()
-            val holisticSearch = holisticSearch(seed.toULong(16), spawns, rolls, avoidTown = (gameVersion != "1.0.2"))
-            val response = mapOf("results" to holisticSearch)
-            call.respond(response)
-        }
-
-        post("/continue") {
-            val (seed, spawns, rolls, genderRatio) = call.receive<HolisticSearch>()
-            val holisticSearch = holisticSearch(seed.toULong(16), spawns, rolls, avoidTown = false, matchCount = 2)
+            val (seed, spawns, rolls, genderRatio, gameVersion, agro, fixedGender) = call.receive<HolisticSearch>()
+            val matcher: (Pokemon) -> Boolean = { it.shiny && it.alpha }
+            val holisticSearch = holisticSearch(
+                seed.toULong(16),
+                spawns,
+                rolls,
+                avoidTown = (gameVersion != "1.0.2"),
+                matchCount = 1,
+                isAggressive = false,
+                spawnLimit = if (spawns > 11) spawns - 4 else spawns,
+                isGenderless = fixedGender,
+                matcher = matcher
+            ).let {
+                val noneMatchExtra = it.isEmpty() || it.none() { sr ->
+                    sr.advances.sumOf { a ->
+                        a.reseeds.dropLast(1).sumOf { rs ->
+                            rs.pokemon.count(matcher)
+                        }
+                    } >= 1
+                }
+                if (noneMatchExtra && spawns > 11) {
+                    holisticSearch(
+                        seed.toULong(16),
+                        spawns,
+                        rolls,
+                        avoidTown = (gameVersion != "1.0.2"),
+                        matchCount = 1,
+                        isAggressive = agro,
+                        isGenderless = fixedGender
+                    )
+                } else {
+                    it
+                }
+            }
             val response = mapOf("results" to holisticSearch)
             call.respond(response)
         }
@@ -64,7 +89,7 @@ fun Application.configureRouting() {
                     styleLink("https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap")
                     styleLink("https://fonts.googleapis.com/icon?family=Material+Icons")
                     styleLink("/assets/css/index.css")
-                    script("text/babel", "/assets/jsx/app.jsx") {  }
+                    script("text/babel", "/assets/jsx/app.jsx") { }
                 }
                 body {
                     div {
@@ -77,4 +102,12 @@ fun Application.configureRouting() {
 }
 
 @Serializable
-data class HolisticSearch(val seed: String, val spawns: Int, val rolls: Int, val genderRatio: List<Int>, val gameVersion: String)
+data class HolisticSearch(
+    val seed: String,
+    val spawns: Int,
+    val rolls: Int,
+    val genderRatio: List<Int>,
+    val gameVersion: String,
+    val agro: Boolean,
+    val fixedGender: Boolean
+)
