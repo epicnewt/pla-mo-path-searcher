@@ -74,6 +74,27 @@ function toActionDescription(actions) {
     });
 }
 
+const PokemonListItem = ({sidtid, gender, nature, shiny, alpha, ivs}) => {
+    const [strike, setStrike] = useState(1)
+    const onClick = useCallback(() => {
+        setStrike(strike + 1)
+    })
+    return (
+        <ListItemText key={sidtid}
+                      style={{textDecoration: strike % 2 ? undefined : 'line-through'}}
+                      onClick={onClick}
+                      secondary={
+                          <div>
+                              {genderSymbols[gender]}
+                              {`${ivs.evs} ${nature} `}
+                              {shiny && ' shiny'}
+                              {alpha && ' alpha'}
+                          </div>
+                      }
+        />
+    );
+}
+
 const SearchResult = ({result, spawns}) => {
     const remainingSpawns = parseInt(queryParams["spawns"] || spawns) - (result.path.reduce((acc, n) => acc + Math.abs(n), 0) + 1);
 
@@ -106,17 +127,7 @@ const SearchResult = ({result, spawns}) => {
                                     reseed.pokemon.map(p => (
                                         <ListItem key={p.seed}>
                                             {/*{`"seed": "C990BE9317900E1F","sidtid": 3032674752,"pid": 3554362865,"ivs": {"hp": 24,  "att": 20,  "def": 19,  "spAtt": 1,  "spDef": 12,  "speed": 15,  "evs": "110000"},"nature": "Brave","gender": 43,"shiny": false,"alpha": false}`}*/}
-                                            <ListItemText key={p.sidtid}
-                                                          secondary={
-                                                              <div>
-                                                                  {`Seed: ${p.seed} EVs: ${p.ivs.evs} Nature: ${p.nature} Gender: ${p.gender}`}
-                                                                  {' Shiny: '}
-                                                                  <span style={{color: p.shiny ? 'green' : undefined}}>{`${p.shiny}`}</span>
-                                                                  {' Alpha: '}
-                                                                  <span style={{color: p.alpha ? 'green' : undefined}}>{`${p.alpha}`}</span>
-                                                              </div>
-                                                          }
-                                            />
+                                            <PokemonListItem {...p} />
                                         </ListItem>
                                     ))
                                 ])}
@@ -129,7 +140,6 @@ const SearchResult = ({result, spawns}) => {
     )
 }
 const SearchResults = ({data, spawns}) => {
-    console.log(`<SearchResults data="${data}"/>`)
     if (!data || data.length === 0) {
         return <span>No results found with 10 actions or less. Search stopped.</span>
     }
@@ -172,13 +182,18 @@ const useLocalStorage = (key, defaultValue) => {
     return [state, advancedSetter]
 }
 
+const genderSymbols = {
+    FEMALE: <span style={{color: "#F6814A", fontFamily: 'sans-serif'}}>♀</span>,
+    MALE: <span style={{color: "#499FFF", fontFamily: 'sans-serif'}}>♂</span>,
+    NONE: null
+}
+
 const App = () => {
     const [seed, setSeed] = useLocalStorage('seed', '')
     const [spawns, setSpawns] = useLocalStorage('spawns', '10')
     const [dexComplete, setDexComplete] = useLocalStorage('complete', false)
     const [dexPerfect, setDexPerfect] = useLocalStorage('perfect', false)
     const [shinyCharm, setShinyCharm] = useLocalStorage('shinyCharm', false)
-    const [gameVersion, setGameVersion] = useLocalStorage('gameVersion', "1.0.2")
     const [useAggressiveAlgorithm, setUseAggressiveAlgorithm] = useLocalStorage('agro', "1.0.2")
     const [fixedGender, setFixedGender] = useLocalStorage('fixedGender', false)
     const isContinue = !!queryParams['continue']
@@ -196,12 +211,10 @@ const App = () => {
         try {
             const data = {
                 seed,
+                species: pkmn && pkmn.dex || 10,
                 spawns: Number.parseInt(spawns),
                 rolls: rolls.current,
-                genderRatio: [50, 50],
-                gameVersion,
-                agro: useAggressiveAlgorithm,
-                fixedGender
+                agro: useAggressiveAlgorithm
             }
 
             setShowSpinner(true)
@@ -305,10 +318,10 @@ ReactDOM.render(
 
 function loadPokemon() {
     const fixedGender = [
-        32,33,34,106,107,128,236,237,313,381,414,475,538,539,627,628,641,642,645,859,860,861,29,30,31,113,115,124,238,241,242,314,380,413,416,440,478,488,548,549,629,630,669,670,671,
-        758,761,762,763,856,857,858,868,869,905,81,82,100,101,120,121,132,137,144,145,146,150,151,201,233,243,244,245,249,250,251,292,337,338,343,344,374,375,376,377,378,379,382,383,
-        384,385,386,436,437,462,474,479,480,481,482,483,484,486,487,489,490,491,492,493,494,599,600,601,615,622,623,638,639,640,643,644,646,647,648,649,703,716,717,718,719,720,721,772,
-        773,774,781,785,786,787,788,789,790,791,792,793,794,795,796,797,798,799,800,801,802,803,804,805,806,807,808,809,854,855,870,880,881,882,883,888,889,890
+        32, 33, 34, 106, 107, 128, 236, 237, 313, 381, 414, 475, 538, 539, 627, 628, 641, 642, 645, 859, 860, 861, 29, 30, 31, 113, 115, 124, 238, 241, 242, 314, 380, 413, 416, 440, 478, 488, 548, 549, 629, 630, 669, 670, 671,
+        758, 761, 762, 763, 856, 857, 858, 868, 869, 905, 81, 82, 100, 101, 120, 121, 132, 137, 144, 145, 146, 150, 151, 201, 233, 243, 244, 245, 249, 250, 251, 292, 337, 338, 343, 344, 374, 375, 376, 377, 378, 379, 382, 383,
+        384, 385, 386, 436, 437, 462, 474, 479, 480, 481, 482, 483, 484, 486, 487, 489, 490, 491, 492, 493, 494, 599, 600, 601, 615, 622, 623, 638, 639, 640, 643, 644, 646, 647, 648, 649, 703, 716, 717, 718, 719, 720, 721, 772,
+        773, 774, 781, 785, 786, 787, 788, 789, 790, 791, 792, 793, 794, 795, 796, 797, 798, 799, 800, 801, 802, 803, 804, 805, 806, 807, 808, 809, 854, 855, 870, 880, 881, 882, 883, 888, 889, 890
     ]
     return (
         (data) => Object.fromEntries(

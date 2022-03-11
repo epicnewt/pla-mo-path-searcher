@@ -1,6 +1,6 @@
 package com.epicnewt.pla.rng.plugins
 
-import com.epicnewt.pla.rng.holisticSearch
+import com.epicnewt.pla.rng.deepHolisticSearch
 import com.epicnewt.pla.rng.model.pokemon.Pokemon
 import io.ktor.application.*
 import io.ktor.html.*
@@ -23,41 +23,20 @@ fun Application.configureRouting() {
         }
 
         post("/holistic-search") {
-            val (seed, spawns, rolls, genderRatio, gameVersion, agro, fixedGender) = call.receive<HolisticSearch>()
+            val (seed, species, spawns, rolls, agro) = call.receive<HolisticSearch>()
             val matcher: (Pokemon) -> Boolean = { it.shiny && it.alpha }
-            val holisticSearch = holisticSearch(
+//            val matcher: (Pokemon) -> Boolean = { it.shiny }
+
+            // try to find an option that doesn't use all the spawns
+            val holisticSearch = deepHolisticSearch(
                 seed.toULong(16),
+                species,
                 spawns,
                 rolls,
-                avoidTown = (gameVersion != "1.0.2"),
-                matchCount = 1,
-                isAggressive = false,
-                spawnLimit = if (spawns > 11) spawns - 4 else spawns,
-                isGenderless = fixedGender,
+                isAggressive = agro, //faster
                 matcher = matcher
-            ).let {
-                val noneMatchExtra = it.isEmpty() || it.none() { sr ->
-                    sr.advances.sumOf { a ->
-                        a.reseeds.dropLast(1).sumOf { rs ->
-                            rs.pokemon.count(matcher)
-                        }
-                    } >= 1
-                }
-                if (noneMatchExtra && spawns > 11) {
-                    holisticSearch(
-                        seed.toULong(16),
-                        spawns,
-                        rolls,
-                        avoidTown = (gameVersion != "1.0.2"),
-                        matchCount = 1,
-                        isAggressive = agro,
-                        isGenderless = fixedGender
-                    )
-                } else {
-                    it
-                }
-            }
-            val response = mapOf("results" to holisticSearch)
+            )
+            val response = mapOf("results" to holisticSearch.toList())
             call.respond(response)
         }
 
@@ -104,10 +83,8 @@ fun Application.configureRouting() {
 @Serializable
 data class HolisticSearch(
     val seed: String,
+    val species: Int,
     val spawns: Int,
     val rolls: Int,
-    val genderRatio: List<Int>,
-    val gameVersion: String,
-    val agro: Boolean,
-    val fixedGender: Boolean
+    val agro: Boolean
 )

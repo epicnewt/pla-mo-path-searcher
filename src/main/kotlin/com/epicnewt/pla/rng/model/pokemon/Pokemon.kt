@@ -4,6 +4,14 @@ import com.epicnewt.pla.rng.XOROSHIRO
 import com.epicnewt.pla.rng.util.toHex
 import kotlinx.serialization.Serializable
 
+const val MALE_ONLY = 0
+const val FEMALE_ONLY = ((32 * 8) - 1)
+const val NO_GENDER = -1
+
+enum class Gender {
+    MALE, FEMALE, NONE
+}
+
 @Serializable
 data class Pokemon(
     val seed: String,
@@ -11,7 +19,7 @@ data class Pokemon(
     val pid: ULong,
     val ivs: IVs,
     val nature: Nature,
-    val gender: Int?,
+    val gender: Gender,
     val shiny: Boolean,
     val alpha: Boolean
 ) {
@@ -19,10 +27,10 @@ data class Pokemon(
         val rng = XOROSHIRO(0u)
         fun fromSeed(
             seed: ULong,
+            species: Int,
             rolls: Int,
             isAlpha: Boolean,
-            isGenderless: Boolean,
-            perfectIVs: Int = if (isAlpha) 3 else 0
+            perfectIVs: Int = if (isAlpha) 3 else 0,
         ): Pokemon {
             rng.reseed(seed)
             val encryption_constant = rng.rand(0xFFFFFFFFu)
@@ -50,16 +58,22 @@ data class Pokemon(
                     ivs[i] = rng.rand(32u).toInt()
             }
             val ability = rng.rand(2u).toUInt()
-            val nature: Int
-            val gender: UInt? = if (isGenderless) null else rng.rand(252u).toUInt() + 1u
-            nature = rng.rand(25u).toInt()
+
+            val gender = when (val ratio = genderRatios[species] ?: -1) {
+                MALE_ONLY -> Gender.MALE
+                FEMALE_ONLY -> Gender.FEMALE
+                NO_GENDER -> Gender.NONE
+                else -> if (rng.rand(252u).toInt() + 1 < ratio) Gender.FEMALE else Gender.MALE
+            }
+
+            val nature: Int = rng.rand(25u).toInt()
             return Pokemon(
                 seed.toHex(),
                 sidtid,
                 pid,
                 IVs.from(ivs),
                 Nature.get(nature),
-                gender?.toInt(),
+                gender,
                 shiny,
                 isAlpha
             )
