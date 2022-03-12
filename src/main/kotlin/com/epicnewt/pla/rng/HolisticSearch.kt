@@ -61,6 +61,7 @@ fun holisticSearch(
     val base = totalSpawns + multiBattleShift - SPAWN_OFFSET
     val uBase = base.toULong()
     val despawns = totalSpawns - SPAWN_OFFSET
+    val pathArr = IntArray(depth)
 
     val matchesFound = ArrayList<SearchResult>()
 
@@ -73,8 +74,12 @@ fun holisticSearch(
             || isDigitSumOverLimit(i, base, depth, despawns, multiBattleShift)
         ) continue
 
-        val pathStr = i.toString(base).padStart(depth, '0') // optimise this next
-        var path = pathStr.toCharArray().map { c -> c.digitToInt(totalSpawns) - multiBattleShift } // optimise this next
+        fillPathArray(i, uBase, multiBattleShift, pathArr)
+        var path = pathArr
+
+        if (isRedundant)
+            path = path.dropLast(1).plus(path.last() - 1).plus(0).toIntArray()
+
         val advance = lastAdvanceOfHolisticAggressivePath(seed, species, rolls, path, spawnInitial) // much faster
         var isMatch = when (advance.reseeds.size) {
             1 -> advance.reseeds.first().pokemon.any(matcher) // is always an advance of 4
@@ -82,10 +87,8 @@ fun holisticSearch(
         }
 
         val (advances, nextSeed) = if (isMatch) {
-            if (isRedundant)
-                path = path.dropLast(1).plus(path.last() - 1).plus(0)
 
-            followHolisticAggressivePath(seed, species, rolls, path, spawnInitial) //full seed
+            followHolisticAggressivePath(seed, species, rolls, path, 0, spawnInitial) //full seed
         } else {
             listOf<Advance>() to ULong.MIN_VALUE
         }
@@ -101,7 +104,7 @@ fun holisticSearch(
         }
 
         if (isMatch) {
-            matchesFound.add(SearchResult(path, advances, nextSeed))
+            matchesFound.add(SearchResult(path.toList(), advances, nextSeed))
         }
     }
 
@@ -114,7 +117,15 @@ fun holisticSearch(
     return holisticSearch(seed, species, totalSpawns, rolls, isAggressive, matchCount, spawnInitial, multiBattleMax, depth + 1, maxDepth, matcher)
 }
 
-private fun lastAdvanceOfHolisticAggressivePath(seed: ULong, species: Int, rolls: Int, path: List<Int>, spawnInitial: Boolean): Advance {
+inline fun fillPathArray(path: ULong, base: ULong, multiBattleShift: Int, pathArr: IntArray) {
+    var n = path;
+    for (i in (pathArr.size - 1) downTo 0) {
+        pathArr[i] = (n % base).toInt() - (if (n == ULong.MIN_VALUE) 0 else multiBattleShift)
+        n /= base
+    }
+}
+
+private fun lastAdvanceOfHolisticAggressivePath(seed: ULong, species: Int, rolls: Int, path: IntArray, spawnInitial: Boolean): Advance {
     val mainRng = XOROSHIRO(seed)
     var latestSeed = seed
 
@@ -142,11 +153,11 @@ private fun lastAdvanceOfHolisticAggressivePath(seed: ULong, species: Int, rolls
         }
     }
 
-    val (finalAdvance, _) = followHolisticAggressivePath(latestSeed, species, rolls, path.drop(advances.size), spawnInitial)
+    val (finalAdvance, _) = followHolisticAggressivePath(latestSeed, species, rolls, path, advances.size, spawnInitial)
     return finalAdvance.first() // there should only be one if we did this right
 }
 
-private fun followHolisticAggressivePath(seed: ULong, species: Int, rolls: Int, path: List<Int>, spawnInitial: Boolean): Pair<ArrayList<Advance>, ULong> {
+private fun followHolisticAggressivePath(seed: ULong, species: Int, rolls: Int, path: IntArray, drop: Int, spawnInitial: Boolean): Pair<ArrayList<Advance>, ULong> {
     val advances = ArrayList<Advance>()
     val spawnGroups = ArrayList<ReseedSet>()
     val actions = ArrayList<Int>()
@@ -187,7 +198,8 @@ private fun followHolisticAggressivePath(seed: ULong, species: Int, rolls: Int, 
         reseed()
     }
 
-    path.forEach { step ->
+    for (i in drop until path.size) {
+        val step = path[i]
         if (step == 0) {
             goToTown()
             for (i in 1..4) { //advance to town
