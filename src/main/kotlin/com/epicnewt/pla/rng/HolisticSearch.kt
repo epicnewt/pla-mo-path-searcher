@@ -189,7 +189,7 @@ private fun followHolisticAggressivePath(seed: ULong, species: Int, rolls: Int, 
                 generatePokemon()
             }
             reseed()
-            isDirty = true
+            isDirty = advances.isEmpty()
         } else if (step < 0) { //aggro multi battle
             actions.add(step)
             for (i in 1..step.absoluteValue) {

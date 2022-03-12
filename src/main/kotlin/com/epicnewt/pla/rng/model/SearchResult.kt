@@ -3,7 +3,7 @@ package com.epicnewt.pla.rng.model
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class SearchResult(val path: List<Int>, val advances: List<Advance>, val nextSeed: ULong) {
+data class SearchResult constructor(val path: List<Int>, val advances: List<Advance>, val nextSeed: ULong) {
     val pathDescription = path.joinToString("§")
         .replace(Regex("-(\\d)§?"), "-$1,")
         .replace(Regex("(-\\d(,-\\d)*),?"), "[$1]")
