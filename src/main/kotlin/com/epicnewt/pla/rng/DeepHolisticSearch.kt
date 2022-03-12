@@ -4,16 +4,17 @@ import com.epicnewt.pla.rng.model.SearchResult
 import com.epicnewt.pla.rng.model.pokemon.Pokemon
 import java.lang.Integer.min
 import kotlin.math.absoluteValue
-import kotlin.math.sign
 
 fun deepHolisticSearch(initialSeed: ULong, species: Int, totalSpawns: Int, rolls: Int, isAggressive: Boolean, matcher: (Pokemon) -> Boolean): Collection<SearchResult> {
     //sugar
     fun search(
-        spawns: Int = totalSpawns, aggressive: Boolean = isAggressive, ignoreFirstMatch: Boolean = false, seed: ULong = initialSeed, spawnInitial: Boolean = true,
+        spawns: Int = totalSpawns, aggressive: Boolean = isAggressive, ignoreFirstMatch: Boolean = false,
+        seed: ULong = initialSeed, spawnInitial: Boolean = true, maxDepth: Int = 10
     ) = holisticSearch(
         seed, species, spawns, rolls, aggressive,
         matchCount = if (ignoreFirstMatch) 2 else 1,
         spawnInitial = spawnInitial,
+        maxDepth = maxDepth,
         matcher = matcher
     )
 
@@ -33,7 +34,7 @@ fun deepHolisticSearch(initialSeed: ULong, species: Int, totalSpawns: Int, rolls
 
         extendedSearch.mergeWith(result).ifEmpty { null }
     }.flatten().ifEmpty {
-        if (isAggressive) search().plus(firstSearch).toSet() else firstSearch
+        search(maxDepth = firstSearch.size.takeIf { it != 0 } ?: 10).plus(firstSearch).toSet()
     }
 }
 

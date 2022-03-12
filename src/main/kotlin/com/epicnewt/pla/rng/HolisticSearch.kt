@@ -53,6 +53,7 @@ fun holisticSearch(
     spawnInitial: Boolean = true,
     multiBattleMax: Int = MULTI_BATTLE_MAX,
     depth: Int = 1,
+    maxDepth: Int = 10,
     matcher: (Pokemon) -> Boolean
 ): Collection<SearchResult> {
     val multiBattleShift = if (isAggressive) multiBattleMax else 0
@@ -100,10 +101,10 @@ fun holisticSearch(
     if (matchesFound.isNotEmpty())
         return matchesFound.toSet()
 
-    if (depth == 10)
+    if (depth == maxDepth)
         return emptyList()
 
-    return holisticSearch(seed, species, totalSpawns, rolls, isAggressive, matchCount, spawnInitial, multiBattleMax, depth + 1, matcher)
+    return holisticSearch(seed, species, totalSpawns, rolls, isAggressive, matchCount, spawnInitial, multiBattleMax, depth + 1, maxDepth, matcher)
 }
 
 private fun lastAdvanceOfHolisticAggressivePath(seed: ULong, species: Int, rolls: Int, path: List<Int>, spawnInitial: Boolean): Advance {
