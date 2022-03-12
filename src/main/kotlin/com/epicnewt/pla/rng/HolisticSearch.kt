@@ -57,7 +57,9 @@ fun holisticSearch(
     matcher: (Pokemon) -> Boolean
 ): Collection<SearchResult> {
     val multiBattleShift = if (isAggressive) multiBattleMax else 0
+    val uMultiBattleShift = multiBattleShift.toULong()
     val base = totalSpawns + multiBattleShift - SPAWN_OFFSET
+    val uBase = base.toULong()
     val despawns = totalSpawns - SPAWN_OFFSET
 
     val matchesFound = ArrayList<SearchResult>()
@@ -65,12 +67,14 @@ fun holisticSearch(
     val start: ULong = if (matchCount == 1) 0u else 10u
     val lastPathN = ((base - 1).toUInt() * base.pow(depth))
     for (i in (start..lastPathN)) {
-        if (isDigitSumOverLimit(i, base, depth, despawns, multiBattleShift)) {
-            continue
-        }
-        val pathStr = i.toString(base).padStart(depth, '0') // optimise this next
+        val isRedundant = ((i % uBase)) > uMultiBattleShift
+        if (
+            depth != maxDepth && isRedundant
+            || isDigitSumOverLimit(i, base, depth, despawns, multiBattleShift)
+        ) continue
 
-        val path = pathStr.toCharArray().map { c -> c.digitToInt(totalSpawns) - multiBattleShift } // optimise this next
+        val pathStr = i.toString(base).padStart(depth, '0') // optimise this next
+        var path = pathStr.toCharArray().map { c -> c.digitToInt(totalSpawns) - multiBattleShift } // optimise this next
         val advance = lastAdvanceOfHolisticAggressivePath(seed, species, rolls, path, spawnInitial) // much faster
         var isMatch = when (advance.reseeds.size) {
             1 -> advance.reseeds.first().pokemon.any(matcher) // is always an advance of 4
@@ -78,6 +82,9 @@ fun holisticSearch(
         }
 
         val (advances, nextSeed) = if (isMatch) {
+            if (isRedundant)
+                path = path.dropLast(1).plus(path.last() - 1).plus(0)
+
             followHolisticAggressivePath(seed, species, rolls, path, spawnInitial) //full seed
         } else {
             listOf<Advance>() to ULong.MIN_VALUE
@@ -116,9 +123,6 @@ private fun lastAdvanceOfHolisticAggressivePath(seed: ULong, species: Int, rolls
         latestSeed = mainRng.next()
         mainRng.reseed(latestSeed)
     }
-    // 1 | 1 | {2,2},2
-    // 1 | 1 | {2,2},2 | 3
-    path.windowed(2, 1, )
 
     var backToTown = spawnInitial
     val advances = path.dropLast(1).dropLastWhile { it < 0 }
